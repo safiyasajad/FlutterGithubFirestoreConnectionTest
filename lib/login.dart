@@ -62,6 +62,8 @@ class _LoginState extends State<Login> {
         ),
       );
 
+      Get.offAll(const Wrapper());
+
     } on FirebaseAuthException catch (e) {
       // This block catches errors specifically from Firebase Authentication.
       // where email does not exist, wrong password, invalid email format
@@ -165,7 +167,7 @@ class _LoginState extends State<Login> {
             
             SizedBox(height:20,),
             
-            ElevatedButton(onPressed: (()=>Get.to(Wrapper())), child: Text("Login")), //when login button is clicked it takes the user to the contents of the wrapper screen
+            ElevatedButton(onPressed: signIn, child: Text("Login")), //when login button is clicked it signs in the user
             SizedBox(height:20,),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,

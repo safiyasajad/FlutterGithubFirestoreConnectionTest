@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttergithubfirestoreconnectiontest/login.dart';
-import 'package:fluttergithubfirestoreconnectiontest/wrapper.dart';
 import 'package:get/get.dart';
 
 class Signup extends StatefulWidget {
@@ -16,67 +15,135 @@ class _SignupState extends State<Signup> {
   TextEditingController email = TextEditingController();
   TextEditingController password = TextEditingController();
 
-    bool isPasswordHidden = true; //sets the password to be hidden
+  bool isPasswordHidden = true; //sets the password to be hidden
+  bool isSigningUp = false;
 
-  signup()async{
-      
+  Future<void> signup() async {
+    final enteredEmail = email.text.trim();
+    final enteredPassword = password.text.trim();
+
     // Check if either field is empty.
     // If empty, show an error message and stop the function.
-      if (email.text.isEmpty|| password.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Please enter both email and password"),
-            backgroundColor: Colors.red,
-          ),
-        );
-
-        // return stops the function here.
-        return;
-      }
+    if (enteredEmail.isEmpty || enteredPassword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("sign up successful"),
+          content: Text("Please enter both email and password"),
+          backgroundColor: Colors.red,
+        ),
+      );
+
+      // return stops the function here.
+      return;
+    }
+
+    setState(() {
+      isSigningUp = true;
+    });
+
+    try {
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: enteredEmail,
+        password: enteredPassword,
+      );
+      await FirebaseAuth.instance.signOut();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Sign up successful"),
           backgroundColor: Colors.green,
         ),
       );
 
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(email: email.text, password: password.text);
-      Get.offAll(Login());
+      Get.offAll(
+        const Login(),
+      ); //when the sign in button is clicked the page is taken to the login page
+    } on FirebaseAuthException catch (e) {
+      debugPrint("Firebase sign up error: ${e.code} - ${e.message}");  //to view in colsole why firebase failed
+
+      String message = e.message ?? "Sign up failed. Error code: ${e.code}";
+
+      if (e.code == 'email-already-in-use') {
+        message = "This email is already registered.";
+      } else if (e.code == 'invalid-email') {
+        message = "Invalid email format.";
+      } else if (e.code == 'weak-password') {
+        message = "Password should be at least 6 characters.";
+      } else if (e.code == 'operation-not-allowed') {
+        message = "Email/password sign up is not enabled in Firebase.";
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Something went wrong: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isSigningUp = false;
+        });
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    email.dispose();
+    password.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Sign Up Page"),),
+      appBar: AppBar(title: Text("Sign Up Page")),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
             TextField(
-              controller:email, //telling code which filed to reference at
+              controller: email, //telling code which filed to reference at
               decoration: InputDecoration(
-                labelText:"Email",
+                labelText: "Email",
                 border: const OutlineInputBorder(),
-                hintText: "Email") //the hint that is given in the email text field
+                hintText: "Email",
+              ), //the hint that is given in the email text field
             ),
-            SizedBox(height:20,),
+            SizedBox(height: 20),
             TextField(
-              controller: password, ///telling code which filed to reference at
+              controller: password,
+
+              ///telling code which filed to reference at
               obscureText: isPasswordHidden,
               decoration: InputDecoration(
                 labelText: "Password", //sets the title of the  box
                 border: const OutlineInputBorder(),
-                hintText: "Password", //the hint that is given in the password text field
-                suffixIcon: IconButton( 
+                hintText:
+                    "Password", //the hint that is given in the password text field
+                suffixIcon: IconButton(
                   onPressed: () {
                     setState(() {
                       isPasswordHidden = !isPasswordHidden;
                     });
                   },
-                  icon: Icon( //eye icon
-                    isPasswordHidden
-                        ? Icons.visibility_off
-                        : Icons.visibility,
+                  icon: Icon(
+                    //eye icon
+                    isPasswordHidden ? Icons.visibility_off : Icons.visibility,
                   ),
                 ),
               ),
@@ -84,16 +151,15 @@ class _SignupState extends State<Signup> {
             SizedBox(height: 20),
 
             Column(
-              
               children: [
                 ElevatedButton(
-                  onPressed: (() => signup()),
-                  child: Text("Sign Up"),
+                  onPressed: isSigningUp ? null : signup,
+                  child: Text(isSigningUp ? "Signing Up..." : "Sign Up"),
                 ),
-                //distance between the signup button and the text 
+                //distance between the signup button and the text
                 SizedBox(height: 20),
 
-                //properties of the text displayed; already have an account 
+                //properties of the text displayed; already have an account
                 Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
@@ -121,10 +187,10 @@ class _SignupState extends State<Signup> {
                   ],
                 ),
               ],
-            )
+            ),
           ],
         ),
-      )
+      ),
     );
   }
 }

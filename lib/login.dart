@@ -20,6 +20,9 @@ class _LoginState extends State<Login> {
   TextEditingController password =TextEditingController(); 
 
   bool isPasswordHidden = true; //sets the password to be hidden
+  bool isSigningIn = false; // Controls login loading state. disable login button while processing
+  //stopping multiple requests to be made before 1 is processed
+  // - show "Signing in..." text
 
   // This function runs when the user presses the Login button.
   Future<void> signIn() async {
@@ -42,6 +45,16 @@ class _LoginState extends State<Login> {
       return;
     }
 
+    // Update UI state.
+    //
+    // This rebuilds the screen and:
+    // - disables button
+    // - changes button text to "Signing in..."
+    
+    setState(() {
+      isSigningIn = true;
+    });
+
     try {
       // This sends the email and password to Firebase Authentication.
       // Firebase checks if the account exists and if the password is correct.
@@ -63,7 +76,6 @@ class _LoginState extends State<Login> {
       );
 
       Get.offAll(const Wrapper());
-
     } on FirebaseAuthException catch (e) {
       // This block catches errors specifically from Firebase Authentication.
       // where email does not exist, wrong password, invalid email format
@@ -108,6 +120,12 @@ class _LoginState extends State<Login> {
           backgroundColor: Colors.red,
         ),
       );
+    } finally { // finally always runs: whether login succeeds or fails
+      if (mounted) {
+        setState(() {   // Reset loading state.
+          isSigningIn = false;
+        });
+      }
     }
   }
 
@@ -167,7 +185,12 @@ class _LoginState extends State<Login> {
             
             SizedBox(height:20,),
             
-            ElevatedButton(onPressed: signIn, child: Text("Login")), //when login button is clicked it signs in the user
+            ElevatedButton(
+              onPressed: isSigningIn ? null : signIn,
+              
+              //Change button text dynamically.
+              child: Text(isSigningIn ? "Signing in..." : "Login"),
+            ), //when login button is clicked it signs in the user
             SizedBox(height:20,),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,

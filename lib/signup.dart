@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttergithubfirestoreconnectiontest/login.dart';
 import 'package:get/get.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Signup extends StatefulWidget {
   const Signup({super.key});
 
@@ -41,11 +43,25 @@ class _SignupState extends State<Signup> {
     });
 
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: enteredEmail,
-        password: enteredPassword,
-      );
-      await FirebaseAuth.instance.signOut();
+      UserCredential userCredential =
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      email: enteredEmail,
+      password: enteredPassword,
+    );
+
+    // Retrieve the user's Firestore document using their UID.
+            //Example path: users/abc123uid
+    await FirebaseFirestore.instance
+        .collection("users")
+        .doc(userCredential.user!.uid)
+        .set({
+      "uid": userCredential.user!.uid,
+      "email": enteredEmail,
+      "role": "user",
+      "createdAt": FieldValue.serverTimestamp(),
+    });
+
+await FirebaseAuth.instance.signOut();
 
       if (!mounted) return;
 
